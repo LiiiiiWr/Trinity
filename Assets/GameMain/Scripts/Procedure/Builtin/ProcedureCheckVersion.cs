@@ -106,7 +106,7 @@ namespace Trinity
             string screenHeight = Screen.height.ToString();
             string screenDpi = Screen.dpi.ToString();
             string screenOrientation = Screen.orientation.ToString();
-            string screenResolution = string.Format("{0} x {1} @ {2}Hz", Screen.currentResolution.width.ToString(), Screen.currentResolution.height.ToString(), Screen.currentResolution.refreshRate.ToString());
+            string screenResolution = Utility.Text.Format("{0} x {1} @ {2}Hz", Screen.currentResolution.width.ToString(), Screen.currentResolution.height.ToString(), Screen.currentResolution.refreshRate.ToString());
             string useWifi = (Application.internetReachability == NetworkReachability.ReachableViaLocalAreaNetwork).ToString();
 
             WWWForm wwwForm = new WWWForm();
@@ -179,29 +179,8 @@ namespace Trinity
             GameEntry.Resource.UpdatePrefixUri = Utility.Path.GetCombinePath(m_VersionInfo.GameUpdateUrl, GetResourceVersionName(), GetPlatformPath());
 
 
-            //更新版本资源礼包
+            //更新版本资源列表
             UpdateVersion();
-
-            //if (m_VersionInfo.ForceGameUpdate)
-            //{
-            //    //是否需要更新版本资源列表
-            //    CheckVersionListResult result = GameEntry.Resource.CheckVersionList(m_VersionInfo.InternalResourceVersion);
-            //    if (result == CheckVersionListResult.NeedUpdate)
-            //    {
-            //        Log.Info("最新内部资源版本号为{0}，需要更新版本资源列表", m_VersionInfo.InternalResourceVersion);
-
-            //        //更新版本资源列表
-            //        GameEntry.Resource.UpdatePrefixUri = m_VersionInfo.GameUpdateUrl;
-            //        GameEntry.Resource.UpdateVersionList(m_VersionInfo.VersionListLength, m_VersionInfo.VersionListHashCode, m_VersionInfo.VersionListZipLength, m_VersionInfo.VersionListZipHashCode, m_UpdateVersionListCallbacks);
-            //    }
-            //    else
-            //    {
-            //        //检查资源
-            //        Log.Info("最新内部资源版本号为{0}，不需要更新版本资源列表，开始检查需要更新的资源", m_VersionInfo.InternalResourceVersion);
-            //        GameEntry.Resource.CheckResources(OnCheckResourcesComplete);
-            //    }
-
-            //}
 
         }
 
@@ -235,13 +214,12 @@ namespace Trinity
                 return string.Empty;
             }
 
-            return string.Format("{0}_{1}_{2}_{3}", splitApplicableGameVersion[0], splitApplicableGameVersion[1], splitApplicableGameVersion[2], m_VersionInfo.InternalResourceVersion.ToString());
+            return Utility.Text.Format("{0}_{1}_{2}_{3}", splitApplicableGameVersion[0], splitApplicableGameVersion[1], splitApplicableGameVersion[2], m_VersionInfo.InternalResourceVersion.ToString());
         }
 
         /// <summary>
         /// 获取平台路径
         /// </summary>
-        /// <returns></returns>
         private string GetPlatformPath()
         {
             switch (Application.platform)
@@ -277,12 +255,8 @@ namespace Trinity
             }
         }
 
-
-
         private void OnUpdateVersionListSuccess(string downloadPath, string downloadUri)
         {
-            //Log.Info("更新版本资源列表成功，开始检查需要更新的资源");
-            //GameEntry.Resource.CheckResources(OnCheckResourcesComplete);
 
             m_LatestVersionComplete = true;
             Log.Info("Update latest version list from '{0}' success.", downloadUri);
@@ -291,30 +265,8 @@ namespace Trinity
 
         private void OnUpdateVersionListFailure(string downloadUri, string errorMessage)
         {
-            //Log.Fatal("更新版本资源列表失败，url:{0},errorMessage{1}", downloadUri, errorMessage);
+          
             Log.Warning("Update latest version list from '{0}' failure, error message '{1}'.", downloadUri, errorMessage);
         }
-
-
-        //private void OnCheckResourcesComplete(bool needUpdateResources, int removedCount, int updateCount, int updateTotalLength, int updateTotalZipLength)
-        //{
-        //    if (needUpdateResources && updateCount > 0)
-        //    {
-        //        Log.Info("需要更新资源，更新数量：{0},更新压缩包大小：{1}", updateCount, updateTotalZipLength);
-        //        GameEntry.Resource.UpdateResources(UpdateResourcesComplete);
-        //    }
-        //    else
-        //    {
-        //        Log.Info("不需要更新资源");
-        //        m_InitResourcesComplete = true;
-        //    }
-        //}
-
-        //private void UpdateResourcesComplete()
-        //{
-        //    Log.Info("资源更新完毕");
-
-        //    m_InitResourcesComplete = true;
-        //}
     }
 }

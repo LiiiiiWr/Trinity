@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using ETHotfix;
 namespace Trinity.Hotfix
 {
     /// <summary>
@@ -16,10 +16,8 @@ namespace Trinity.Hotfix
         {
             try
             {
-                Game.Scene.ModelScene = ETModel.Game.Scene;
-
                 Game.Scene.AddComponent<OpcodeTypeComponent>();
-                Game.Scene.AddComponent<MessageDispatherComponent>();
+                Game.Scene.AddComponent<MessageDispatcherComponent>();
             }
             catch (Exception e)
             {
@@ -28,18 +26,7 @@ namespace Trinity.Hotfix
             }
         }
 
-        public static void Update()
-        {
-            try
-            {
-                Game.EventSystem.Update();
-            }
-            catch (Exception e)
-            {
-
-                throw new GameFrameworkException("轮询ET网络时出现异常：", e);
-            }
-        }
+     
 
         public static void Shutdown()
         {

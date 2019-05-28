@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using ETModel;
 
-namespace Trinity.Hotfix
+namespace ETHotfix
 {
 	public sealed class EventSystem
 	{
@@ -12,37 +12,21 @@ namespace Trinity.Hotfix
 
 		private readonly UnOrderMultiMap<Type, IAwakeSystem> awakeSystems = new UnOrderMultiMap<Type, IAwakeSystem>();
 
-		private readonly UnOrderMultiMap<Type, IStartSystem> startSystems = new UnOrderMultiMap<Type, IStartSystem>();
-
-		private readonly UnOrderMultiMap<Type, IDestroySystem> destroySystems = new UnOrderMultiMap<Type, IDestroySystem>();
-
 		private readonly UnOrderMultiMap<Type, ILoadSystem> loadSystems = new UnOrderMultiMap<Type, ILoadSystem>();
 
-		private readonly UnOrderMultiMap<Type, IUpdateSystem> updateSystems = new UnOrderMultiMap<Type, IUpdateSystem>();
-
-		private readonly UnOrderMultiMap<Type, ILateUpdateSystem> lateUpdateSystems = new UnOrderMultiMap<Type, ILateUpdateSystem>();
-
-		private readonly UnOrderMultiMap<Type, IChangeSystem> changeSystems = new UnOrderMultiMap<Type, IChangeSystem>();
-
-		private Queue<long> updates = new Queue<long>();
-		private Queue<long> updates2 = new Queue<long>();
-
-		private readonly Queue<long> starts = new Queue<long>();
-
+	
 		private Queue<long> loaders = new Queue<long>();
 		private Queue<long> loaders2 = new Queue<long>();
 
-		private Queue<long> lateUpdates = new Queue<long>();
-		private Queue<long> lateUpdates2 = new Queue<long>();
 
 		public EventSystem()
 		{
 			this.types.Clear();
-
-            //获取所有热更新层类的Type
-            List<Type> ts = GameEntry.ILRuntime.GetHotfixTypes();
 			
-			foreach (Type type in ts)
+            //TODO:此处修改了ET源码
+			//List<Type> ts = ETModel.Game.Hotfix.GetHotfixTypes();
+            List<Type> ts = Trinity.GameEntry.ILRuntime.GetHotfixTypes();
+            foreach (Type type in ts)
 			{
 				// ILRuntime无法判断是否有Attribute
 				//if (type.GetCustomAttributes(typeof (Attribute), false).Length == 0)
@@ -64,46 +48,16 @@ namespace Trinity.Hotfix
 
 				object obj = Activator.CreateInstance(type);
 
-				IAwakeSystem objectSystem = obj as IAwakeSystem;
-				if (objectSystem != null)
+				switch (obj)
 				{
-					this.awakeSystems.Add(objectSystem.Type(), objectSystem);
-				}
-
-				IUpdateSystem updateSystem = obj as IUpdateSystem;
-				if (updateSystem != null)
-				{
-					this.updateSystems.Add(updateSystem.Type(), updateSystem);
-				}
-
-				ILateUpdateSystem lateUpdateSystem = obj as ILateUpdateSystem;
-				if (lateUpdateSystem != null)
-				{
-					this.lateUpdateSystems.Add(lateUpdateSystem.Type(), lateUpdateSystem);
-				}
-
-				IStartSystem startSystem = obj as IStartSystem;
-				if (startSystem != null)
-				{
-					this.startSystems.Add(startSystem.Type(), startSystem);
-				}
-
-				IDestroySystem destroySystem = obj as IDestroySystem;
-				if (destroySystem != null)
-				{
-					this.destroySystems.Add(destroySystem.Type(), destroySystem);
-				}
-
-				ILoadSystem loadSystem = obj as ILoadSystem;
-				if (loadSystem != null)
-				{
-					this.loadSystems.Add(loadSystem.Type(), loadSystem);
-				}
-
-				IChangeSystem changeSystem = obj as IChangeSystem;
-				if (changeSystem != null)
-				{
-					this.changeSystems.Add(changeSystem.Type(), changeSystem);
+					case IAwakeSystem objectSystem:
+						this.awakeSystems.Add(objectSystem.Type(), objectSystem);
+						break;
+					
+					case ILoadSystem loadSystem:
+						this.loadSystems.Add(loadSystem.Type(), loadSystem);
+						break;
+				
 				}
 			}
 
@@ -111,7 +65,6 @@ namespace Trinity.Hotfix
 		}
 
 	
-
 		public List<Type> GetTypes()
 		{
 			return this.types;
@@ -128,27 +81,14 @@ namespace Trinity.Hotfix
 				this.loaders.Enqueue(component.InstanceId);
 			}
 
-			if (this.updateSystems.ContainsKey(type))
-			{
-				this.updates.Enqueue(component.InstanceId);
-			}
-
-			if (this.startSystems.ContainsKey(type))
-			{
-				this.starts.Enqueue(component.InstanceId);
-			}
-
-			if (this.lateUpdateSystems.ContainsKey(type))
-			{
-				this.lateUpdates.Enqueue(component.InstanceId);
-			}
+		
 		}
 
 		public void Remove(long instanceId)
 		{
 			this.allComponents.Remove(instanceId);
 		}
-
+	
 		public void Awake(Component component)
 		{
 			List<IAwakeSystem> iAwakeSystems = this.awakeSystems[component.GetType()];
@@ -277,32 +217,6 @@ namespace Trinity.Hotfix
 			}
 		}
 
-		public void Change(Component component)
-		{
-			List<IChangeSystem> iChangeSystems = this.changeSystems[component.GetType()];
-			if (iChangeSystems == null)
-			{
-				return;
-			}
-
-			foreach (IChangeSystem iChangeSystem in iChangeSystems)
-			{
-				if (iChangeSystem == null)
-				{
-					continue;
-				}
-
-				try
-				{
-					iChangeSystem.Run(component);
-				}
-				catch (Exception e)
-				{
-					Log.Error(e);
-				}
-			}
-		}
-
 		public void Load()
 		{
 			while (this.loaders.Count > 0)
@@ -342,143 +256,14 @@ namespace Trinity.Hotfix
 			ObjectHelper.Swap(ref this.loaders, ref this.loaders2);
 		}
 
-		private void Start()
-		{
-			while (this.starts.Count > 0)
-			{
-				long instanceId = this.starts.Dequeue();
-				Component component;
-				if (!this.allComponents.TryGetValue(instanceId, out component))
-				{
-					continue;
-				}
+	
 
-				List<IStartSystem> iStartSystems = this.startSystems[component.GetType()];
-				if (iStartSystems == null)
-				{
-					continue;
-				}
-
-				foreach (IStartSystem iStartSystem in iStartSystems)
-				{
-					try
-					{
-						iStartSystem.Run(component);
-					}
-					catch (Exception e)
-					{
-						Log.Error(e);
-					}
-				}
-			}
-		}
-
-		public void Destroy(Component component)
-		{
-			List<IDestroySystem> iDestroySystems = this.destroySystems[component.GetType()];
-			if (iDestroySystems == null)
-			{
-				return;
-			}
-
-			foreach (IDestroySystem iDestroySystem in iDestroySystems)
-			{
-				if (iDestroySystem == null)
-				{
-					continue;
-				}
-
-				try
-				{
-					iDestroySystem.Run(component);
-				}
-				catch (Exception e)
-				{
-					Log.Error(e);
-				}
-			}
-		}
-
-		public void Update()
-		{
-			this.Start();
-			
-			while (this.updates.Count > 0)
-			{
-				long instanceId = this.updates.Dequeue();
-				Component component;
-				if (!this.allComponents.TryGetValue(instanceId, out component))
-				{
-					continue;
-				}
-				if (component.IsDisposed)
-				{
-					continue;
-				}
-				
-				List<IUpdateSystem> iUpdateSystems = this.updateSystems[component.GetType()];
-				if (iUpdateSystems == null)
-				{
-					continue;
-				}
-
-				this.updates2.Enqueue(instanceId);
-
-				foreach (IUpdateSystem iUpdateSystem in iUpdateSystems)
-				{
-					try
-					{
-						iUpdateSystem.Run(component);
-					}
-					catch (Exception e)
-					{
-						Log.Error(e);
-					}
-				}
-			}
-
-			ObjectHelper.Swap(ref this.updates, ref this.updates2);
-		}
-
-		public void LateUpdate()
-		{
-			while (this.lateUpdates.Count > 0)
-			{
-				long instanceId = this.lateUpdates.Dequeue();
-				Component component;
-				if (!this.allComponents.TryGetValue(instanceId, out component))
-				{
-					continue;
-				}
-				if (component.IsDisposed)
-				{
-					continue;
-				}
-				
-				List<ILateUpdateSystem> iLateUpdateSystems = this.lateUpdateSystems[component.GetType()];
-				if (iLateUpdateSystems == null)
-				{
-					continue;
-				}
-
-				this.lateUpdates2.Enqueue(instanceId);
-
-				foreach (ILateUpdateSystem iLateUpdateSystem in iLateUpdateSystems)
-				{
-					try
-					{
-						iLateUpdateSystem.Run(component);
-					}
-					catch (Exception e)
-					{
-						Log.Error(e);
-					}
-				}
-			}
-
-			ObjectHelper.Swap(ref this.lateUpdates, ref this.lateUpdates2);
-		}
 
 	
+
+		
+
+	
+		
 	}
 }

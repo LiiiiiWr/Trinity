@@ -1,15 +1,10 @@
 ﻿using System;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Trinity.Hotfix
+namespace ETHotfix
 {
-	[BsonIgnoreExtraElements]
 	public abstract class ComponentWithId : Component
 	{
-		[BsonIgnoreIfDefault]
-		[BsonDefaultValue(0L)]
-		[BsonElement]
-		[BsonId]
 		public long Id { get; set; }
 
 		protected ComponentWithId()

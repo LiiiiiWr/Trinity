@@ -1,19 +1,25 @@
-﻿using ETModel;
+﻿using System;
+using ETModel;
 using MongoDB.Bson.Serialization.Attributes;
+#if !SERVER
+using UnityEngine;
+#endif
 
-namespace Trinity.Hotfix
+namespace ETHotfix
 {
-	[BsonIgnoreExtraElements]
-	public abstract class Component : Object, IDisposable, IComponentSerialize
+	public abstract class Component : Object, IDisposable
 	{
-		// 只有Game.EventSystem.Add方法中会设置该值，如果new出来的对象不想加入Game.EventSystem中，则需要自己在构造函数中设置
-		[BsonIgnore]
 		public long InstanceId { get; private set; }
+		
+#if !SERVER
+        //TODO:此处修改了ET源码
+		//public static GameObject Global { get; } = GameObject.Find("/Global");
+        public static GameObject Global { get; } = GameObject.Find("ETNetwork");
+		public GameObject GameObject { get; protected set; }
+#endif
 
-		[BsonIgnore]
 		private bool isFromPool;
 
-		[BsonIgnore]
 		public bool IsFromPool
 		{
 			get
@@ -29,12 +35,13 @@ namespace Trinity.Hotfix
 					return;
 				}
 
-				this.InstanceId = IdGenerater.GenerateId();
-				Game.EventSystem.Add(this);
+				if (this.InstanceId == 0)
+				{
+					this.InstanceId = IdGenerater.GenerateInstanceId();
+				}
 			}
 		}
 
-		[BsonIgnore]
 		public bool IsDisposed
 		{
 			get
@@ -43,15 +50,38 @@ namespace Trinity.Hotfix
 			}
 		}
 
-		[BsonIgnore]
-		public Component Parent { get; set; }
+		private Component parent;
+		
+		public Component Parent
+		{
+			get
+			{
+				return this.parent;
+			}
+			set
+			{
+				this.parent = value;
+
+#if !SERVER
+				if (this.parent == null)
+				{
+					this.GameObject.transform.SetParent(Global.transform, false);
+					return;
+				}
+
+				if (this.GameObject != null && this.parent.GameObject != null)
+				{
+					this.GameObject.transform.SetParent(this.parent.GameObject.transform, false);
+				}
+#endif
+			}
+		}
 
 		public T GetParent<T>() where T : Component
 		{
 			return this.Parent as T;
 		}
 
-		[BsonIgnore]
 		public Entity Entity
 		{
 			get
@@ -59,38 +89,52 @@ namespace Trinity.Hotfix
 				return this.Parent as Entity;
 			}
 		}
-
+		
 		protected Component()
 		{
-			this.InstanceId = IdGenerater.GenerateId();
+			this.InstanceId = IdGenerater.GenerateInstanceId();
+#if !SERVER
+			if (!this.GetType().IsDefined(typeof(HideInHierarchy), true))
+			{
+				this.GameObject = new GameObject();
+				this.GameObject.name = this.GetType().Name;
+				//this.GameObject.layer = LayerNames.GetLayerInt(LayerNames.HIDDEN);
+				this.GameObject.transform.SetParent(Global.transform, false);
+				this.GameObject.AddComponent<ComponentView>().Component = this;
+			}
+#endif
 		}
-		
+
+
 		public virtual void Dispose()
 		{
 			if (this.IsDisposed)
 			{
 				return;
 			}
-			
-			// 触发Destroy事件
-			Game.EventSystem.Destroy(this);
 
 			Game.EventSystem.Remove(this.InstanceId);
-
+			
 			this.InstanceId = 0;
 
 			if (this.IsFromPool)
 			{
 				Game.ObjectPool.Recycle(this);
 			}
+			else
+			{
+#if !SERVER
+				if (this.GameObject != null)
+				{
+					UnityEngine.Object.Destroy(this.GameObject);
+				}
+#endif
+			}
 		}
-
-		public virtual void BeginSerialize()
+		
+		public override string ToString()
 		{
-		}
-
-		public virtual void EndDeSerialize()
-		{
+			return MongoHelper.ToJson(this);
 		}
 	}
 }

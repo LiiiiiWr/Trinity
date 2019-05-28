@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------
-// Game Framework v3.x
-// Copyright © 2013-2018 Jiang Yin. All rights reserved.
+// Game Framework
+// Copyright © 2013-2019 Jiang Yin. All rights reserved.
 // Homepage: http://gameframework.cn/
 // Feedback: mailto:jiangyin@gameframework.cn
 //------------------------------------------------------------
@@ -130,7 +130,6 @@ namespace UnityGameFramework.Runtime
             m_DepthInUIGroup = 0;
             m_PauseCoveredUIForm = pauseCoveredUIForm;
 
-            //新界面实例时才执行界面逻辑的OnInit方法
             if (!isNewInstance)
             {
                 return;
@@ -143,7 +142,7 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
-            m_UIFormLogic.OnInit(userData);
+            m_UIFormLogic?.OnInit(userData);
         }
 
         /// <summary>
